@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 style="color: #003366; margin-bottom: 30px; border-right: 5px solid #00aaff; padding-right: 15px;">معالجة البيانات والتحويل الرقمي</h1>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
+    
+    <!-- العمود الأول: الماسح الضوئي + صورة الفاتورة -->
+    <div>
+        <div class="panel">
+            <h3 style="margin-top: 0; color: #00aaff;">🔍 تقنية OCR الذكية</h3>
+            <p style="font-size: 0.85rem; color: #666;">ارفع ملف الفاتورة هنا ليقوم النظام باستخراج النصوص آلياً</p>
+            <form action="/scan" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" required>
+                <button type="submit" class="btn btn-accent" style="margin-top:15px;">تشغيل المسح الضوئي</button>
+            </form>
+        </div>
+
+        <!-- ظهور الصورة هنا مباشرة تحت الماسح -->
+        {% if scanned_data and scanned_data.filename %}
+        <div class="panel" style="margin-top: 20px; text-align: center;">
+            <h3 style="color: #003366; text-align: right; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">📄 الفاتورة المرفوعة للمطابقة</h3>
+            <img src="{{ url_for('static', filename='uploads/' ~ scanned_data.filename) }}" alt="الفاتورة المرفوعة" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- العمود الثاني: نموذج مراجعة البيانات -->
+    <div class="panel">
+        <h3 style="margin-top: 0; color: #003366;">✍️ مراجعة واعتماد البيانات</h3>
+        <form action="/save" method="post">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>اسم الجهة الموردة:</label>
+                    <input type="text" name="vendor" placeholder="اسم المورد" value="{{ scanned_data.vendor if scanned_data else '' }}" required>
+                </div>
+                <div>
+                    <label>الرقم المرجعي:</label>
+                    <input type="text" name="inv_no" placeholder="رقم الفاتورة" value="{{ scanned_data.inv_no if scanned_data else '' }}">
+                </div>
+                <div>
+                    <label>القيمة الإجمالية (ريال):</label>
+                    <input type="text" name="amount" placeholder="0.00" value="{{ scanned_data.amount if scanned_data else '' }}" required>
+                </div>
+                <div>
+                    <label>تصنيف المصروفات:</label>
+                    <select name="category">
+                        <option value="المطاعم والمقاهي">المطاعم والمقاهي</option>
+                        <option value="التسوق العام">التسوق العام</option>
+                        <option value="الخدمات والكهرباء">الخدمات والكهرباء</option>
+                        <option value="النقل والوقود">النقل والوقود</option>
+                        <option value="أخرى" selected>أخرى</option>
+                    </select>
+                </div>
+                <div>
+                    <label>التاريخ:</label>
+                    <input type="date" name="date" value="{{ scanned_data.date if scanned_data else '' }}">
+                </div>
+                <div>
+                    <label>الوقت:</label>
+                    <input type="time" name="time" value="{{ scanned_data.time if scanned_data else '' }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 20px;">حفظ واعتماد السجل نهائياً</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

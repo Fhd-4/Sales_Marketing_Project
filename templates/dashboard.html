@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 style="color: #003366; margin-bottom: 30px;">لوحة مؤشرات الأداء والتحليل الذكي</h1>
+
+<div class="stats-grid">
+    <div class="stat-card"><h3>إجمالي الإيرادات</h3><h2>{{ "{:,.2f}".format(total) }} ريال</h2></div>
+    <div class="stat-card"><h3>متوسط الطلب</h3><h2>{{ "{:,.2f}".format(aov) }} ريال</h2></div>
+    <div class="stat-card"><h3>إجمالي العمليات</h3><h2>{{ count }}</h2></div>
+</div>
+
+<div class="stats-grid" style="margin-top: 25px;">
+    <div class="stat-card" style="border-top-color: #2ecc71;">
+        <h3>المورد الأكثر تعاملاً</h3>
+        <p style="font-size: 1.2rem; font-weight: bold; color: #003366; margin-top:10px;">{{ top_vendor }}</p>
+    </div>
+    <div class="stat-card" style="border-top-color: #f1c40f;">
+        <h3>الفئة الأكثر صرفاً</h3>
+        <p style="font-size: 1.2rem; font-weight: bold; color: #003366; margin-top:10px;">{{ top_category }}</p>
+    </div>
+</div>
+{% endblock %}

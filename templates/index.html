@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Enterprise Sales Dashboard</title>
+</head>
+<body>
+    <div class="header-bar">
+        <h2> Intelligent Sales System</h2>
+    </div>
+
+    <div class="main-container">
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Gross Revenue</h3><p>{{ "{:,.2f}".format(total) }} SAR</p></div>
+            <div class="stat-card"><h3>Average Order (AOV)</h3><p>{{ "{:,.2f}".format(aov) }} SAR</p></div>
+            <div class="stat-card"><h3>Total Entries</h3><p>{{ sales|length }} Units</p></div>
+        </div>
+
+        <div class="panel" style="margin-bottom: 30px;">
+            <form action="/" method="get" style="display: flex; gap: 15px; align-items: center;">
+                <input type="text" name="search" placeholder="Search by Store or Category..." value="{{ search_query }}" style="flex: 4; margin: 0;">
+                <button type="submit" class="btn btn-save" style="flex: 1; margin: 0;">🔍 Filter Results</button>
+                {% if search_query %}<a href="/" class="btn-clear">Clear</a>{% endif %}
+            </form>
+        </div>
+
+        <div class="dashboard-layout">
+            <div class="panel">
+                <div class="panel-title"><span>🔍</span> Smart OCR Scanner</div>
+                <form action="/scan" method="post" enctype="multipart/form-data">
+                    <input type="file" name="file" required>
+                    <button type="submit" class="btn btn-scan">Execute OCR Scan</button>
+                </form>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title"><span>✍️</span> Data Validation</div>
+                <form action="/save" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <input type="text" name="vendor" placeholder="Vendor Name" value="{{ scanned_data.vendor if scanned_data else '' }}" required>
+                        <input type="text" name="inv_no" placeholder="Invoice #" value="{{ scanned_data.inv_no if scanned_data else '' }}">
+                        <input type="text" name="amount" placeholder="Amount (SAR)" value="{{ scanned_data.amount if scanned_data else '' }}" required>
+                        <select name="category">
+                            <option value="Food">Food & Beverage</option>
+                            <option value="Retail">Retail Sales</option>
+                            <option value="General" selected>General</option>
+                        </select>
+                        <input type="date" name="date" value="{{ scanned_data.date if scanned_data else '' }}">
+                        <input type="time" name="time" value="{{ scanned_data.time if scanned_data else '' }}">
+                    </div>
+                    <button type="submit" class="btn btn-save">Commit to Database</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="panel-title"><span>📊</span> Historical Sales Logs</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Vendor</th>
+                        <th>Invoice #</th>
+                        <th>Category</th>
+                        <th>Net Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in sales %}
+                    <tr>
+                        <td><span style="color:#888;">{{ row['date'] }}</span><br><strong>{{ row['time'] }}</strong></td>
+                        <td><strong>{{ row['vendor'] }}</strong></td>
+                        <td>#{{ row['inv_no'] }}</td>
+                        <td><span class="badge-category">{{ row['category'] }}</span></td>
+                        <td><strong style="color:#003366;">{{ "{:,.2f}".format(row['amount']|float) }} SAR</strong></td>
+                        <td><a href="/delete/{{ row['id'] }}" style="color:#e74c3c; font-weight:bold; text-decoration:none;" onclick="return confirm('Delete this record?')">Discard</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

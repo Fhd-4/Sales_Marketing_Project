@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام إدارة المبيعات الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="sidebar no-print">
+        <div class="sidebar-header"><h3>إدارة المبيعات</h3></div>
+        <ul class="nav-links">
+            
+            <!-- إخفاء الإحصائيات والسجل إذا لم يكن المستخدم مديراً -->
+            {% if session.get('role') == 'admin' %}
+            <li><a href="{{ url_for('dashboard') }}">📊 الإحصائيات العامة</a></li>
+            <li><a href="{{ url_for('logs') }}">🔍 سجل العمليات والبحث</a></li>
+            {% endif %}
+            
+            <li><a href="{{ url_for('add') }}">➕ إضافة فاتورة جديدة</a></li>
+            <li style="margin-top: 50px;"><a href="{{ url_for('logout') }}" style="color: #ff6b6b;">🚪 تسجيل الخروج</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>

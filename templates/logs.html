@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="panel no-print">
+    <h3 style="margin-top: 0;">🔍 إدارة سجل الفواتير</h3>
+    
+    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <a href="/logs?filter=today" class="btn filter-toggle {% if filter_type == 'today' %}active-today{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">📅 فواتير اليوم فقط</a>
+        
+        <a href="/logs?filter=all" class="btn filter-toggle {% if filter_type == 'all' or not filter_type %}active-all{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">📋 إظهار جميع الفواتير</a>
+    </div>
+
+    <form action="/logs" method="get" style="display: flex; gap: 10px; align-items: center;">
+        <input type="hidden" name="filter" value="{{ filter_type }}">
+        <input type="text" name="search" placeholder="ابحث باسم المورد أو القسم..." value="{{ search_query }}" style="flex: 4; margin:0;">
+        <button type="submit" class="btn btn-accent" style="flex: 1; margin:0;">بحث</button>
+        
+        <a href="{{ url_for('export_csv') }}" class="btn" style="flex: 0.5; min-width: 120px; margin:0; background: #27ae60; color: white; text-align: center; text-decoration: none; line-height: 24px;">📊 تصدير Excel</a>
+        
+        <button type="button" onclick="window.print()" class="btn" style="flex: 0.5; margin:0; background: #95a5a6; color: white; min-width: 120px;">🖨️ طباعة تقرير</button>
+    </form>
+</div>
+
+<div class="panel printable">
+    <h2 class="print-only">تقرير المبيعات</h2>
+    <table width="100%" style="border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid #eee; text-align: right;">
+                <th>التاريخ / الوقت</th><th>المورد</th><th>الفئة</th><th>المبلغ</th><th class="no-print">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in sales %}
+            <tr style="border-bottom: 1px solid #f9f9f9;">
+                <td><span style="color:#888;">{{ row['date'] }}</span> | <strong>{{ row['time'] }}</strong></td>
+                <td><strong>{{ row['vendor'] }}</strong></td>
+                <td><span style="background: #e1f5fe; padding: 4px 8px; border-radius: 5px; font-size: 0.85rem; color: #0288d1;">{{ row['category'] }}</span></td>
+                <td><strong style="color: #003366;">{{ row['amount'] }} ريال</strong></td>
+                <td class="no-print">
+                    <a href="{{ url_for('delete', id=row['id']) }}" style="color:#e74c3c; font-weight:bold; text-decoration:none;" onclick="return confirm('هل أنت متأكد من حذف هذا السجل؟')">إزالة</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 20px; color: #999;">لا توجد فواتير حالياً.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    @media print {
+        .no-print, .sidebar { display: none !important; }
+        .main-content { margin: 0 !important; width: 100% !important; }
+        .print-only { display: block !important; text-align: center; margin-bottom: 20px; }
+        .panel { box-shadow: none !important; border: 1px solid #eee !important; }
+    }
+    .print-only { display: none; }
+</style>
+{% endblock %}
