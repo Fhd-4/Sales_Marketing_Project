@@ -2,29 +2,80 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>نظام إدارة المبيعات الذكي</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المبيعات والتسويق الذكي</title>
+    <!-- استيراد خط Cairo من Google Fonts للمظهر الرسمي والاحترافي -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- استيراد الأيقونات FontAwesome لمظهر أكثر حيوية وتفاعلية -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ملف الاستايل الرئيسي للمشروع -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <!-- القائمة الجانبية (Sidebar) التي تظهر على اليمين وتختفي عند الطباعة -->
     <div class="sidebar no-print">
-        <div class="sidebar-header"><h3>إدارة المبيعات</h3></div>
+        <div class="sidebar-header">
+            <i class="fa-solid fa-chart-line logo-icon"></i>
+            <h3>إدارة المبيعات</h3>
+            <span class="sub-logo">التحليل والتحويل الرقمي</span>
+        </div>
+        
         <ul class="nav-links">
-            
-            <!-- إخفاء الإحصائيات والسجل إذا لم يكن المستخدم مديراً -->
             {% if session.get('role') == 'admin' %}
-            <li><a href="{{ url_for('dashboard') }}">📊 الإحصائيات العامة</a></li>
-            <li><a href="{{ url_for('logs') }}">🔍 سجل العمليات والبحث</a></li>
+            <li class="{{ 'active' if request.path == '/' or request.path == '/dashboard' }}">
+                <a href="{{ url_for('dashboard') }}">
+                    <i class="fa-solid fa-gauge"></i> 📊 الإحصائيات العامة
+                </a>
+            </li>
+            <li class="{{ 'active' if request.path == '/logs' }}">
+                <a href="{{ url_for('logs_page') }}">
+                    <i class="fa-solid fa-database"></i> 🔍 سجل العمليات والبحث
+                </a>
+            </li>
             {% endif %}
             
-            <li><a href="{{ url_for('add') }}">➕ إضافة فاتورة جديدة</a></li>
-            <li style="margin-top: 50px;"><a href="{{ url_for('logout') }}" style="color: #ff6b6b;">🚪 تسجيل الخروج</a></li>
+            <li class="{{ 'active' if request.path == '/add' }}">
+                <a href="{{ url_for('add_page') }}">
+                    <i class="fa-solid fa-file-invoice"></i> ➕ إضافة فاتورة جديدة
+                </a>
+            </li>
+            
+            <li>
+                <a href="/api/docs" target="_blank" style="color: #00aaff;">
+                    <i class="fa-solid fa-book"></i> 📖 توثيق Swagger API
+                </a>
+            </li>
+            
+            <li class="logout-link">
+                <a href="{{ url_for('logout') }}">
+                    <i class="fa-solid fa-right-from-bracket"></i> 🚪 تسجيل الخروج
+                </a>
+            </li>
         </ul>
     </div>
+
+    <!-- المحتوى الرئيسي للموقع (Main Content) على اليسار -->
     <div class="main-content">
+        <!-- شريط علوي يعرض معلومات المستخدم والترحيب -->
+        <div class="top-navbar no-print">
+            <div class="welcome-text">
+                مرحباً بك، <strong class="username-display">{{ session.get('username') }}</strong> 
+                <span class="role-badge {{ session.get('role') }}">
+                    {{ 'مدير النظام' if session.get('role') == 'admin' else 'مدخل بيانات' }}
+                </span>
+            </div>
+            <div class="date-display" id="currentDate"></div>
+        </div>
+
         <div class="content-wrapper">
             {% block content %}{% endblock %}
         </div>
     </div>
+
+    <script>
+        // عرض التاريخ الحالي بشكل رسمي وجميل في الشريط العلوي
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('ar-EG', options);
+    </script>
 </body>
 </html>

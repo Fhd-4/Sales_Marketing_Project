@@ -1,49 +1,87 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1 style="color: #003366; margin-bottom: 30px; border-right: 5px solid #00aaff; padding-right: 15px;">معالجة البيانات والتحويل الرقمي</h1>
+<div class="dashboard-header animate-fade-in">
+    <h1>معالجة البيانات والتحويل الرقمي (OCR)</h1>
+    <p>استخراج آلي ذكي لبيانات الفواتير من الصور ومراجعتها وتأكيدها برمجياً</p>
+</div>
 
-<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
+<div class="add-layout-grid animate-slide-up">
     
-    <!-- العمود الأول: الماسح الضوئي + صورة الفاتورة -->
-    <div>
-        <div class="panel">
-            <h3 style="margin-top: 0; color: #00aaff;">🔍 تقنية OCR الذكية</h3>
-            <p style="font-size: 0.85rem; color: #666;">ارفع ملف الفاتورة هنا ليقوم النظام باستخراج النصوص آلياً</p>
-            <form action="/scan" method="post" enctype="multipart/form-data">
-                <input type="file" name="file" required>
-                <button type="submit" class="btn btn-accent" style="margin-top:15px;">تشغيل المسح الضوئي</button>
-            </form>
-        </div>
+    <!-- القسم الأيمن: رفع الملف وعرض الفاتورة -->
+    <div class="panel ocr-panel">
+        <h3 class="panel-title"><i class="fa-solid fa-microchip"></i> تقنية OCR ومعالجة الصور الذكية</h3>
+        <p class="panel-subtitle">ارفع صورة الفاتورة (PNG, JPEG) ليقوم النظام باستخراج النصوص والأسعار تلقائياً.</p>
+        
+        <form id="ocrForm" enctype="multipart/form-data">
+            <!-- مساحة سحب وإفلات الملفات المتقدمة -->
+            <div class="file-drop-area" id="dropArea">
+                <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                <span class="drop-text" style="font-weight: 600;">اسحب وأفلت صورة الفاتورة هنا</span>
+                <span style="font-size: 0.8rem; color: #94a3b8;">أو</span>
+                <button type="button" class="btn-browse" onclick="document.getElementById('fileInput').click()">تصفح الملفات</button>
+                <input type="file" id="fileInput" name="file" accept="image/*" style="display:none;" required>
+            </div>
+            
+            <div id="fileSelectedInfo" class="file-selected-info" style="display:none;">
+                <i class="fa-solid fa-file-image"></i>
+                <span id="fileNameDisplay" style="font-weight: 600;">bill.jpg</span>
+            </div>
 
-        <!-- ظهور الصورة هنا مباشرة تحت الماسح -->
-        {% if scanned_data and scanned_data.filename %}
-        <div class="panel" style="margin-top: 20px; text-align: center;">
-            <h3 style="color: #003366; text-align: right; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">📄 الفاتورة المرفوعة للمطابقة</h3>
-            <img src="{{ url_for('static', filename='uploads/' ~ scanned_data.filename) }}" alt="الفاتورة المرفوعة" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+            <button type="submit" class="btn btn-primary btn-scan-ocr" id="scanBtn" style="margin-top: 15px; width: 100%;" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> تشغيل معالجة الـ OCR
+            </button>
+        </form>
+
+        <!-- نافذة عرض الفاتورة مع تأثير خط المسح الليزري (Scanning laser) -->
+        <div id="imagePreviewContainer" class="image-preview-container" style="display: none; margin-top: 20px;">
+            <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 10px; font-weight: 700; border-right: 3px solid #00aaff; padding-right: 8px;">📄 الفاتورة المرفوعة للمطابقة</h4>
+            <div class="receipt-wrapper">
+                <div class="scanner-laser" id="laserLine" style="display: none;"></div>
+                <img id="receiptPreview" src="" alt="الفاتورة المرفوعة">
+            </div>
+            
+            <!-- خطوات معالجة الذكاء الاصطناعي التفاعلية -->
+            <div id="ocrLoadingSteps" class="ocr-steps-container" style="display:none;">
+                <div class="ocr-step" id="step-upload"><i class="fa-regular fa-circle-play"></i> رفع الفاتورة وتجهيز الملف...</div>
+                <div class="ocr-step" id="step-cv"><i class="fa-regular fa-circle"></i> تنقية الصورة وزيادة التباين (OpenCV)...</div>
+                <div class="ocr-step" id="step-ocr"><i class="fa-regular fa-circle"></i> استخراج النصوص والرموز (Tesseract OCR)...</div>
+                <div class="ocr-step" id="step-parse"><i class="fa-regular fa-circle"></i> تحليل البيانات وتحديد القيمة المالية والمورد...</div>
+            </div>
         </div>
-        {% endif %}
     </div>
 
-    <!-- العمود الثاني: نموذج مراجعة البيانات -->
-    <div class="panel">
-        <h3 style="margin-top: 0; color: #003366;">✍️ مراجعة واعتماد البيانات</h3>
-        <form action="/save" method="post">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div>
-                    <label>اسم الجهة الموردة:</label>
-                    <input type="text" name="vendor" placeholder="اسم المورد" value="{{ scanned_data.vendor if scanned_data else '' }}" required>
+    <!-- القسم الأيسر: نموذج مراجعة البيانات واعتمادها -->
+    <div class="panel form-panel">
+        <h3 class="panel-title"><i class="fa-solid fa-file-signature"></i> مراجعة واعتماد بيانات السجل</h3>
+        <p class="panel-subtitle">راجع البيانات المستخرجة بدقة قبل حفظها نهائياً في قاعدة البيانات.</p>
+        
+        <!-- صندوق التنبيه بالنجاح -->
+        <div id="saveSuccessAlert" class="alert-box alert-success" style="display:none;">
+            <i class="fa-solid fa-circle-check"></i> تم حفظ الفاتورة واعتمادها في السجل بنجاح!
+        </div>
+
+        <!-- صندوق التنبيه بالخطأ -->
+        <div id="saveErrorAlert" class="alert-box alert-danger" style="display:none;">
+            <i class="fa-solid fa-circle-exclamation"></i> <span id="saveErrorMessage"></span>
+        </div>
+
+        <form id="saveRecordForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم الجهة الموردة: <span class="required">*</span></label>
+                    <input type="text" id="vendor" placeholder="مثال: جرير، العثيم..." required>
                 </div>
-                <div>
-                    <label>الرقم المرجعي:</label>
-                    <input type="text" name="inv_no" placeholder="رقم الفاتورة" value="{{ scanned_data.inv_no if scanned_data else '' }}">
+                <div class="form-group">
+                    <label>الرقم المرجعي (رقم الفاتورة):</label>
+                    <input type="text" id="inv_no" placeholder="مثال: REF-2026">
                 </div>
-                <div>
-                    <label>القيمة الإجمالية (ريال):</label>
-                    <input type="text" name="amount" placeholder="0.00" value="{{ scanned_data.amount if scanned_data else '' }}" required>
+                <div class="form-group">
+                    <label>القيمة الإجمالية (ريال): <span class="required">*</span></label>
+                    <input type="text" id="amount" placeholder="0.00" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label>تصنيف المصروفات:</label>
-                    <select name="category">
+                    <select id="category">
                         <option value="المطاعم والمقاهي">المطاعم والمقاهي</option>
                         <option value="التسوق العام">التسوق العام</option>
                         <option value="الخدمات والكهرباء">الخدمات والكهرباء</option>
@@ -51,18 +89,460 @@
                         <option value="أخرى" selected>أخرى</option>
                     </select>
                 </div>
-                <div>
+                <div class="form-group">
                     <label>التاريخ:</label>
-                    <input type="date" name="date" value="{{ scanned_data.date if scanned_data else '' }}">
+                    <input type="date" id="date">
                 </div>
-                <div>
+                <div class="form-group">
                     <label>الوقت:</label>
-                    <input type="time" name="time" value="{{ scanned_data.time if scanned_data else '' }}">
+                    <input type="time" id="time">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top: 20px;">حفظ واعتماد السجل نهائياً</button>
+            
+            <button type="submit" class="btn btn-save-record" id="saveBtn" style="margin-top: 25px;">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ واعتماد السجل نهائياً
+            </button>
         </form>
     </div>
 
 </div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const dropArea = document.getElementById('dropArea');
+    const fileSelectedInfo = document.getElementById('fileSelectedInfo');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const scanBtn = document.getElementById('scanBtn');
+    
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const receiptPreview = document.getElementById('receiptPreview');
+    const laserLine = document.getElementById('laserLine');
+    const ocrLoadingSteps = document.getElementById('ocrLoadingSteps');
+    
+    const ocrForm = document.getElementById('ocrForm');
+    const saveRecordForm = document.getElementById('saveRecordForm');
+    
+    const saveSuccessAlert = document.getElementById('saveSuccessAlert');
+    const saveErrorAlert = document.getElementById('saveErrorAlert');
+    const saveErrorMessage = document.getElementById('saveErrorMessage');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // تفعيل إلقاء وسحب الصور
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropArea.classList.add('highlight');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('highlight');
+        }, false);
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length) {
+            fileInput.files = files;
+            handleFileSelect();
+        }
+    });
+
+    fileInput.addEventListener('change', handleFileSelect);
+
+    function handleFileSelect() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            fileNameDisplay.innerText = file.name;
+            fileSelectedInfo.style.display = 'flex';
+            scanBtn.disabled = false;
+            
+            // عرض معاينة مبدئية للصورة
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                receiptPreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+                ocrLoadingSteps.style.display = 'none'; // إخفاء خطوات التحميل السابقة
+            }
+            reader.readAsDataURL(file);
+        } else {
+            scanBtn.disabled = true;
+            fileSelectedInfo.style.display = 'none';
+        }
+    }
+
+    // إرسال الصورة لـ API الـ OCR لاستخراج النصوص مع خطوات التحميل
+    ocrForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        saveSuccessAlert.style.display = 'none';
+        saveErrorAlert.style.display = 'none';
+        laserLine.style.display = 'block';
+        ocrLoadingSteps.style.display = 'flex';
+        scanBtn.disabled = true;
+        scanBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري استخراج البيانات...';
+
+        // محاكاة وتحديث خطوات المعالجة برمجياً لمظهر فائق الاحترافية
+        resetOcrSteps();
+        
+        updateStep('step-upload', 'running', '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري رفع صورة الفاتورة للمطابقة...');
+        
+        // تجهيز بيانات الإرسال
+        const formData = new FormData();
+        formData.append('file', file);
+
+        let ocrCompleted = false;
+
+        // تشغيل توقيتات المحاكاة للخطوات
+        setTimeout(() => {
+            if (ocrCompleted) return;
+            updateStep('step-upload', 'done', '<i class="fa-solid fa-circle-check"></i> تم رفع صورة الفاتورة بنجاح.');
+            updateStep('step-cv', 'running', '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري معالجة وتصفية الصورة (OpenCV)...');
+        }, 800);
+
+        setTimeout(() => {
+            if (ocrCompleted) return;
+            updateStep('step-cv', 'done', '<i class="fa-solid fa-circle-check"></i> تمت تصفية وتصحيح زوايا الصورة.');
+            updateStep('step-ocr', 'running', '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري استخراج النصوص بالذكاء الاصطناعي (Tesseract OCR)...');
+        }, 1800);
+
+        setTimeout(() => {
+            if (ocrCompleted) return;
+            updateStep('step-ocr', 'done', '<i class="fa-solid fa-circle-check"></i> تم استخراج نصوص الفاتورة بالكامل.');
+            updateStep('step-parse', 'running', '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري مطابقة البيانات واستخراج المبالغ والمورد...');
+        }, 3000);
+
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            ocrCompleted = true;
+
+            if (response.ok) {
+                // إكمال جميع الخطوات فوراً بنجاح
+                updateStep('step-upload', 'done', '<i class="fa-solid fa-circle-check"></i> تم الرفع.');
+                updateStep('step-cv', 'done', '<i class="fa-solid fa-circle-check"></i> تمت معالجة وتصفية الصورة.');
+                updateStep('step-ocr', 'done', '<i class="fa-solid fa-circle-check"></i> تم قراءة نصوص الفاتورة.');
+                updateStep('step-parse', 'done', '<i class="fa-solid fa-circle-check"></i> تمت مطابقة وتصنيف البيانات بنجاح!');
+
+                // ملء الحقول بالبيانات المستخرجة
+                document.getElementById('vendor').value = data.vendor || '';
+                document.getElementById('inv_no').value = data.inv_no || '';
+                document.getElementById('amount').value = data.amount || '0.00';
+                document.getElementById('category').value = data.category || 'أخرى';
+                document.getElementById('date').value = data.date || '';
+                document.getElementById('time').value = data.time || '';
+            } else {
+                alert('فشلت قراءة الفاتورة تلقائياً: ' + (data.message || 'خطأ غير معروف'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء الاتصال بخدمة OCR.');
+        } finally {
+            laserLine.style.display = 'none';
+            scanBtn.disabled = false;
+            scanBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> تشغيل معالجة الـ OCR';
+        }
+    });
+
+    // حفظ واعتماد السجل نهائياً عن طريق API
+    saveRecordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        saveSuccessAlert.style.display = 'none';
+        saveErrorAlert.style.display = 'none';
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري حفظ السجل المالي...';
+
+        const payload = {
+            vendor: document.getElementById('vendor').value.trim(),
+            inv_no: document.getElementById('inv_no').value.trim(),
+            amount: document.getElementById('amount').value.trim(),
+            category: document.getElementById('category').value,
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value
+        };
+
+        try {
+            const response = await fetch('/api/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                saveSuccessAlert.style.display = 'block';
+                saveRecordForm.reset();
+                ocrForm.reset();
+                fileSelectedInfo.style.display = 'none';
+                imagePreviewContainer.style.display = 'none';
+                scanBtn.disabled = true;
+
+                // إذا كان المستخدم مديراً، يتم توجيهه لصفحة السجل لمشاهدة البيانات بعد ثانيتين
+                const userRole = "{{ session.get('role') }}";
+                if (userRole === 'admin') {
+                    setTimeout(() => {
+                        window.location.href = '/logs';
+                    }, 1500);
+                }
+            } else {
+                saveErrorMessage.innerText = data.message || 'حدث خطأ أثناء حفظ الفاتورة.';
+                saveErrorAlert.style.display = 'flex';
+            }
+        } catch (err) {
+            console.error(err);
+            saveErrorMessage.innerText = 'حدث خطأ في الاتصال بالخادم.';
+            saveErrorAlert.style.display = 'flex';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ واعتماد السجل نهائياً';
+        }
+    });
+
+    // دوال مساعدة لتحديث الخطوات التفاعلية للمسح
+    function resetOcrSteps() {
+        const steps = ['step-upload', 'step-cv', 'step-ocr', 'step-parse'];
+        steps.forEach(id => {
+            const el = document.getElementById(id);
+            el.className = 'ocr-step';
+            if (id === 'step-upload') {
+                el.innerHTML = '<i class="fa-regular fa-circle-play"></i> رفع الفاتورة وتجهيز الملف...';
+            } else if (id === 'step-cv') {
+                el.innerHTML = '<i class="fa-regular fa-circle"></i> تنقية الصورة وزيادة التباين (OpenCV)...';
+            } else if (id === 'step-ocr') {
+                el.innerHTML = '<i class="fa-regular fa-circle"></i> استخراج النصوص والرموز (Tesseract OCR)...';
+            } else if (id === 'step-parse') {
+                el.innerHTML = '<i class="fa-regular fa-circle"></i> تحليل البيانات وتحديد القيمة المالية والمورد...';
+            }
+        });
+    }
+
+    function updateStep(id, status, text) {
+        const el = document.getElementById(id);
+        el.innerHTML = text;
+        if (status === 'running') {
+            el.className = 'ocr-step running';
+        } else if (status === 'done') {
+            el.className = 'ocr-step done';
+        }
+    }
+</script>
+
+<style>
+    /* تنسيقات إضافية لخطوات المسح الاحترافية */
+    .ocr-steps-container {
+        margin-top: 20px;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        text-align: right;
+    }
+    
+    .ocr-step {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .ocr-step.running {
+        color: #00aaff;
+    }
+    
+    .ocr-step.done {
+        color: #27ae60;
+    }
+
+    /* ستايلات الهيكل والتجاوب */
+    .add-layout-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 25px;
+        align-items: start;
+    }
+    @media (max-width: 900px) {
+        .add-layout-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .file-drop-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 35px 20px;
+        text-align: center;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    .file-drop-area.highlight {
+        border-color: #00aaff;
+        background: rgba(0, 170, 255, 0.05);
+    }
+    .drop-icon {
+        font-size: 2.8rem;
+        color: #cbd5e1;
+        transition: 0.3s;
+    }
+    .file-drop-area:hover .drop-icon {
+        color: #00aaff;
+        transform: translateY(-3px);
+    }
+    .drop-text {
+        font-size: 0.9rem;
+        color: #475569;
+    }
+    .btn-browse {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 8px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 700;
+        color: #475569;
+        transition: 0.2s;
+        box-shadow: var(--shadow-sm);
+    }
+    .btn-browse:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+    
+    .file-selected-info {
+        margin-top: 15px;
+        background: rgba(0, 170, 255, 0.08);
+        color: #0077cc;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid rgba(0, 170, 255, 0.15);
+    }
+
+    /* ليزر المسح الضوئي */
+    .receipt-wrapper {
+        position: relative;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-top: 10px;
+        background: #f1f5f9;
+        display: flex;
+        justify-content: center;
+        box-shadow: var(--shadow-sm);
+    }
+    .receipt-wrapper img {
+        max-width: 100%;
+        max-height: 420px;
+        display: block;
+    }
+    .scanner-laser {
+        position: absolute;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(to bottom, rgba(0, 170, 255, 0), rgba(0, 170, 255, 0.8), rgba(0, 170, 255, 1));
+        box-shadow: 0 0 15px #00aaff;
+        animation: scanAnim 2.5s ease-in-out infinite;
+        z-index: 10;
+    }
+    @keyframes scanAnim {
+        0% { top: 0%; }
+        50% { top: 100%; }
+        100% { top: 0%; }
+    }
+
+    /* فوروم مراجعة السجل */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px 20px;
+    }
+    @media (max-width: 600px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .form-group label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #334155;
+    }
+    .required {
+        color: #ef4444;
+    }
+    .form-group input, .form-group select {
+        padding: 11px 15px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.9rem;
+        background: #f8fafc;
+        color: #1e293b;
+        outline: none;
+        transition: all 0.25s ease;
+    }
+    .form-group input:focus, .form-group select:focus {
+        border-color: #00aaff;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.1);
+    }
+    
+    .btn-save-record {
+        background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 10px;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        width: 100%;
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+        transition: all 0.25s ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-save-record:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+        filter: brightness(1.05);
+    }
+    .btn-save-record:active {
+        transform: translateY(0);
+    }
+</style>
 {% endblock %}

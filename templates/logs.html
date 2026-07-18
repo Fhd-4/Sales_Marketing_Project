@@ -1,60 +1,377 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="panel no-print">
-    <h3 style="margin-top: 0;">🔍 إدارة سجل الفواتير</h3>
-    
+<div class="dashboard-header no-print">
+    <h1>إدارة سجل الفواتير والمبيعات</h1>
+    <p>البحث، التصفية، الطباعة، وحذف السجلات المالية بأمان</p>
+</div>
+
+<!-- شريط البحث والتصفية والتصدير -->
+<div class="panel filter-panel no-print">
     <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-        <a href="/logs?filter=today" class="btn filter-toggle {% if filter_type == 'today' %}active-today{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">📅 فواتير اليوم فقط</a>
+        <a href="/logs?filter=today" class="btn-filter {% if filter_type == 'today' %}active{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">
+            <i class="fa-solid fa-calendar-day"></i> فواتير اليوم فقط
+        </a>
         
-        <a href="/logs?filter=all" class="btn filter-toggle {% if filter_type == 'all' or not filter_type %}active-all{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">📋 إظهار جميع الفواتير</a>
+        <a href="/logs?filter=all" class="btn-filter {% if filter_type == 'all' or not filter_type %}active{% endif %}" style="flex: 1; text-align: center; text-decoration: none;">
+            <i class="fa-solid fa-rectangle-list"></i> إظهار جميع الفواتير
+        </a>
     </div>
 
-    <form action="/logs" method="get" style="display: flex; gap: 10px; align-items: center;">
+    <form action="/logs" method="get" class="search-form">
         <input type="hidden" name="filter" value="{{ filter_type }}">
-        <input type="text" name="search" placeholder="ابحث باسم المورد أو القسم..." value="{{ search_query }}" style="flex: 4; margin:0;">
-        <button type="submit" class="btn btn-accent" style="flex: 1; margin:0;">بحث</button>
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" name="search" placeholder="ابحث باسم الجهة الموردة أو فئة المصروف..." value="{{ search_query }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-search-submit">بحث</button>
         
-        <a href="{{ url_for('export_csv') }}" class="btn" style="flex: 0.5; min-width: 120px; margin:0; background: #27ae60; color: white; text-align: center; text-decoration: none; line-height: 24px;">📊 تصدير Excel</a>
+        <a href="{{ url_for('export_csv') }}" class="btn btn-export" title="تصدير بصيغة Excel (CSV)">
+            <i class="fa-solid fa-file-excel"></i> تصدير Excel
+        </a>
         
-        <button type="button" onclick="window.print()" class="btn" style="flex: 0.5; margin:0; background: #95a5a6; color: white; min-width: 120px;">🖨️ طباعة تقرير</button>
+        <button type="button" onclick="window.print()" class="btn btn-print">
+            <i class="fa-solid fa-print"></i> طباعة تقرير
+        </button>
     </form>
 </div>
 
-<div class="panel printable">
-    <h2 class="print-only">تقرير المبيعات</h2>
-    <table width="100%" style="border-collapse: collapse;">
-        <thead>
-            <tr style="border-bottom: 2px solid #eee; text-align: right;">
-                <th>التاريخ / الوقت</th><th>المورد</th><th>الفئة</th><th>المبلغ</th><th class="no-print">الإجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in sales %}
-            <tr style="border-bottom: 1px solid #f9f9f9;">
-                <td><span style="color:#888;">{{ row['date'] }}</span> | <strong>{{ row['time'] }}</strong></td>
-                <td><strong>{{ row['vendor'] }}</strong></td>
-                <td><span style="background: #e1f5fe; padding: 4px 8px; border-radius: 5px; font-size: 0.85rem; color: #0288d1;">{{ row['category'] }}</span></td>
-                <td><strong style="color: #003366;">{{ row['amount'] }} ريال</strong></td>
-                <td class="no-print">
-                    <a href="{{ url_for('delete', id=row['id']) }}" style="color:#e74c3c; font-weight:bold; text-decoration:none;" onclick="return confirm('هل أنت متأكد من حذف هذا السجل؟')">إزالة</a>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 20px; color: #999;">لا توجد فواتير حالياً.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- جدول الفواتير المعتمدة -->
+<div class="panel table-panel printable">
+    <h2 class="print-only">تقرير مبيعات ومصروفات المنشأة المعتمد</h2>
+    <div class="print-meta print-only">
+        تاريخ استخراج التقرير: <span id="printDate"></span>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>التاريخ والوقت</th>
+                    <th>الجهة الموردة</th>
+                    <th>الرقم المرجعي</th>
+                    <th>التصنيف</th>
+                    <th>القيمة الإجمالية</th>
+                    <th class="no-print">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in sales %}
+                <tr id="row-{{ row['id'] }}">
+                    <td>
+                        <div class="date-col">
+                            <span class="table-date">{{ row['date'] }}</span>
+                            <span class="table-time"><i class="fa-regular fa-clock"></i> {{ row['time'] }}</span>
+                        </div>
+                    </td>
+                    <td><strong class="vendor-title">{{ row['vendor'] }}</strong></td>
+                    <td><span class="invoice-badge">#{{ row['inv_no'] if row['inv_no'] else 'بدون' }}</span></td>
+                    <td>
+                        <span class="category-badge {{ 'cyan' if row['category'] == 'المطاعم والمقاهي' else 'yellow' if row['category'] == 'التسوق العام' else 'blue' if row['category'] == 'الخدمات والكهرباء' else 'purple' if row['category'] == 'النقل والوقود' else 'gray' }}">
+                            {{ row['category'] }}
+                        </span>
+                    </td>
+                    <td><strong class="amount-title">{{ row['amount'] }} <span class="sar">ريال</span></strong></td>
+                    <td class="no-print">
+                        <button type="button" class="btn-delete-row" onclick="deleteRecord({{ row['id'] }})" title="حذف هذا السجل">
+                            <i class="fa-solid fa-trash-can"></i> إزالة
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-state">
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                        <i class="fa-solid fa-folder-open empty-icon"></i>
+                        <p>لا توجد فواتير أو سجلات مطابقة لعملية البحث حالياً.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
+<script>
+    // كتابة التاريخ والوقت في التقرير المطبوع تلقائياً
+    document.getElementById('printDate').innerText = new Date().toLocaleString('ar-EG');
+
+    // حذف سجل الفاتورة باستخدام AJAX بالاتصال بـ API Swagger
+    async function deleteRecord(id) {
+        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا السجل نهائياً من قاعدة البيانات؟')) {
+            return;
+        }
+
+        try {
+            // الاتصال بـ API الحذف الموثق في Swagger
+            const response = await fetch(`/api/delete/${id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // تلاشي الصف من الجدول برمجياً وتأثير بصري راقٍ
+                const row = document.getElementById(`row-${id}`);
+                if (row) {
+                    row.style.transition = 'all 0.5s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        row.remove();
+                        // فحص إذا كان الجدول فارغاً الآن لإظهار الحالة الفارغة
+                        const tbody = document.querySelector('.premium-table tbody');
+                        if (tbody && tbody.children.length === 0) {
+                            tbody.innerHTML = `
+                                <tr class="empty-state">
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                        <i class="fa-solid fa-folder-open empty-icon"></i>
+                                        <p>لا توجد فواتير أو سجلات مطابقة لعملية البحث حالياً.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }, 500);
+                }
+            } else {
+                alert(data.message || 'فشل حذف السجل.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ في الاتصال بالخادم أثناء محاولة الحذف.');
+        }
+    }
+</script>
+
 <style>
+    /* تنسيقات خاصة بصفحة السجلات */
+    .filter-panel {
+        margin-bottom: 25px;
+    }
+    
+    .btn-filter {
+        display: block;
+        padding: 12px;
+        background: #f1f5f9;
+        color: #475569;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: 0.3s;
+        border: 1px solid #e2e8f0;
+    }
+    .btn-filter:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+    }
+    .btn-filter.active {
+        background: #00aaff;
+        color: white;
+        border-color: #00aaff;
+        box-shadow: 0 4px 10px rgba(0, 170, 255, 0.2);
+    }
+    
+    .search-form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    @media (max-width: 768px) {
+        .search-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+    
+    .search-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+    .search-input-wrapper input {
+        width: 100%;
+        padding: 12px 40px 12px 15px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.9rem;
+        outline: none;
+        transition: 0.2s;
+    }
+    .search-input-wrapper input:focus {
+        border-color: #00aaff;
+    }
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+    
+    .btn-search-submit {
+        padding: 12px 25px;
+        width: auto !important;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .btn-export {
+        background: #27ae60;
+        color: white;
+        text-decoration: none;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.3s;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-export:hover {
+        background: #219653;
+        transform: translateY(-1px);
+    }
+    
+    .btn-print {
+        background: #64748b;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.3s;
+        border: none;
+        cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+    }
+    .btn-print:hover {
+        background: #475569;
+        transform: translateY(-1px);
+    }
+
+    /* ستايل الجدول الاحترافي */
+    .premium-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: right;
+    }
+    .premium-table th {
+        background: #f8fafc;
+        padding: 15px 20px;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .premium-table td {
+        padding: 18px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+    .premium-table tbody tr {
+        transition: 0.2s;
+    }
+    .premium-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    
+    .date-col {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .table-date {
+        color: #1e293b;
+        font-weight: 600;
+    }
+    .table-time {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+    
+    .vendor-title {
+        color: #0f172a;
+        font-size: 0.95rem;
+    }
+    .amount-title {
+        color: #0f172a;
+        font-size: 1rem;
+    }
+    .sar {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: #64748b;
+    }
+    .invoice-badge {
+        background: #f1f5f9;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        color: #475569;
+        font-family: monospace;
+    }
+
+    /* ألوان شارات الأقسام */
+    .category-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .category-badge.cyan { background: #e0f7fa; color: #006064; }
+    .category-badge.yellow { background: #fffde7; color: #f57f17; }
+    .category-badge.blue { background: #e8eaf6; color: #1a237e; }
+    .category-badge.purple { background: #f3e5f5; color: #4a148c; }
+    .category-badge.gray { background: #eceff1; color: #263238; }
+
+    .btn-delete-row {
+        background: none;
+        border: none;
+        color: #ef4444;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        transition: 0.2s;
+    }
+    .btn-delete-row:hover {
+        background: rgba(239, 68, 68, 0.08);
+    }
+    
+    .empty-icon {
+        font-size: 3rem;
+        color: #cbd5e1;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    /* إعدادات الطباعة للتقارير الرسمية */
     @media print {
         .no-print, .sidebar { display: none !important; }
         .main-content { margin: 0 !important; width: 100% !important; }
-        .print-only { display: block !important; text-align: center; margin-bottom: 20px; }
-        .panel { box-shadow: none !important; border: 1px solid #eee !important; }
+        .print-only { display: block !important; }
+        .table-panel { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        body { background: white !important; }
     }
     .print-only { display: none; }
+    .print-meta {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 10px;
+    }
 </style>
 {% endblock %}

@@ -1,21 +1,252 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1 style="color: #003366; margin-bottom: 30px;">لوحة مؤشرات الأداء والتحليل الذكي</h1>
-
-<div class="stats-grid">
-    <div class="stat-card"><h3>إجمالي الإيرادات</h3><h2>{{ "{:,.2f}".format(total) }} ريال</h2></div>
-    <div class="stat-card"><h3>متوسط الطلب</h3><h2>{{ "{:,.2f}".format(aov) }} ريال</h2></div>
-    <div class="stat-card"><h3>إجمالي العمليات</h3><h2>{{ count }}</h2></div>
+<!-- شريط العنوان والترحيب المطور -->
+<div class="dashboard-header no-print animate-fade-in">
+    <h1>لوحة مؤشرات الأداء والتحليل المالي</h1>
+    <p>تحليل فوري للمبيعات، توزيع المصروفات بالذكاء الاصطناعي، ومراقبة أداء العمليات</p>
 </div>
 
-<div class="stats-grid" style="margin-top: 25px;">
-    <div class="stat-card" style="border-top-color: #2ecc71;">
-        <h3>المورد الأكثر تعاملاً</h3>
-        <p style="font-size: 1.2rem; font-weight: bold; color: #003366; margin-top:10px;">{{ top_vendor }}</p>
+<!-- شبكة بطاقات الإحصائيات الفخمة -->
+<div class="stats-grid animate-slide-up">
+    <div class="stat-card card-primary">
+        <div class="card-icon">
+            <i class="fa-solid fa-wallet"></i>
+        </div>
+        <div class="card-info">
+            <h3>إجمالي الإيرادات / المصروفات</h3>
+            <h2>{{ "{:,.2f}".format(total) }} <span class="currency">ريال</span></h2>
+        </div>
+        <div class="card-footer">القيمة المالية الكلية للسجلات المعتمدة</div>
     </div>
-    <div class="stat-card" style="border-top-color: #f1c40f;">
-        <h3>الفئة الأكثر صرفاً</h3>
-        <p style="font-size: 1.2rem; font-weight: bold; color: #003366; margin-top:10px;">{{ top_category }}</p>
+    
+    <div class="stat-card card-accent">
+        <div class="card-icon">
+            <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div class="card-info">
+            <h3>متوسط قيمة الفاتورة (AOV)</h3>
+            <h2>{{ "{:,.2f}".format(aov) }} <span class="currency">ريال</span></h2>
+        </div>
+        <div class="card-footer">معدل الصرف والإنفاق للعملية الواحدة</div>
+    </div>
+    
+    <div class="stat-card card-success">
+        <div class="card-icon">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+        </div>
+        <div class="card-info">
+            <h3>العمليات المسجلة</h3>
+            <h2>{{ count }} <span class="unit">عملية</span></h2>
+        </div>
+        <div class="card-footer">العدد الإجمالي للفواتير التي تمت أرشفتها</div>
     </div>
 </div>
+
+<!-- قسم التحليلات المتقدمة: الرسم البياني + الفواتير الأخيرة -->
+<div class="analytics-section animate-slide-up" style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px;">
+    
+    <!-- الكرت الأيمن: توزيع المصروفات (رسم بياني) -->
+    <div class="panel chart-panel" style="margin-bottom: 0;">
+        <h3 class="panel-title"><i class="fa-solid fa-chart-pie"></i> هيكل المصروفات</h3>
+        <p class="panel-subtitle">النسب المئوية للإنفاق المالي مقسماً حسب الفئات الأساسية</p>
+        
+        <div class="chart-container" style="position: relative; height: 260px; display: flex; justify-content: center; align-items: center;">
+            <canvas id="expensesChart"></canvas>
+            <div id="noChartData" style="display: none; color: #94a3b8; font-size: 0.9rem; text-align: center;">
+                <i class="fa-solid fa-chart-line" style="font-size: 2.5rem; margin-bottom: 10px; display: block;"></i>
+                لا توجد بيانات كافية لرسم المخطط البياني.
+            </div>
+        </div>
+    </div>
+
+    <!-- الكرت الأيسر: آخر الفواتير المضافة حديثاً -->
+    <div class="panel recent-panel" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 class="panel-title" style="margin: 0;"><i class="fa-solid fa-clock-rotate-left"></i> العمليات الأخيرة</h3>
+            <a href="{{ url_for('logs_page') }}" class="btn-view-all no-print">عرض السجل بالكامل <i class="fa-solid fa-arrow-left"></i></a>
+        </div>
+        <p class="panel-subtitle">أحدث 5 فواتير تم رفعها ومعالجتها في النظام</p>
+
+        <div class="table-responsive" style="margin-top: 15px;">
+            <table class="premium-table mini-table">
+                <thead>
+                    <tr>
+                        <th>المورد</th>
+                        <th>التصنيف</th>
+                        <th>المبلغ</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody id="recentInvoicesBody">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #94a3b8; padding: 30px;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل السجلات الأخيرة...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- إدراج مكتبة Chart.js عبر CDN موثوق ومستقر -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // جلب البيانات من الـ API لعرض الرسم البياني وقائمة العمليات الأخيرة ديناميكياً
+        fetch('/api/logs')
+            .then(response => response.json())
+            .then(data => {
+                // 1. معالجة بيانات الرسم البياني
+                if (!data || data.length === 0) {
+                    document.getElementById('expensesChart').style.display = 'none';
+                    document.getElementById('noChartData').style.display = 'block';
+                    document.getElementById('recentInvoicesBody').innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #94a3b8; padding: 30px;">
+                                لا توجد فواتير مسجلة حالياً.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const categories = {};
+                data.forEach(item => {
+                    const cat = item.category || 'أخرى';
+                    const amt = parseFloat(item.amount.replace(/,/g, '')) || 0;
+                    categories[cat] = (categories[cat] || 0) + amt;
+                });
+
+                const labels = Object.keys(categories);
+                const values = Object.values(categories);
+
+                // رسم مخطط الدونات (Doughnut Chart) الفاخر
+                const ctx = document.getElementById('expensesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: [
+                                '#00aaff', // الأزرق السماوي
+                                '#27ae60', // الأخضر
+                                '#f1c40f', // الأصفر
+                                '#9b59b6', // البنفسجي
+                                '#e67e22', // البرتقالي
+                                '#94a3b8'  // الرمادي
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: 'Cairo',
+                                        size: 11
+                                    },
+                                    padding: 15
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${context.raw.toLocaleString('ar-EG', {minimumFractionDigits: 2})} ريال`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+
+                // 2. تعبئة قائمة العمليات الأخيرة (آخر 5 فواتير مضافة)
+                const recentInvoicesBody = document.getElementById('recentInvoicesBody');
+                const recent = data.slice(0, 5); // أخذ أول 5 عناصر فقط من المصفوفة المرتبة تنازلياً
+                
+                let tbodyHtml = '';
+                recent.forEach(row => {
+                    // تحديد لون الشارة بناءً على فئة المصروف
+                    let badgeClass = 'gray';
+                    if (row.category === 'المطاعم والمقاهي') badgeClass = 'cyan';
+                    else if (row.category === 'التسوق العام') badgeClass = 'yellow';
+                    else if (row.category === 'الخدمات والكهرباء') badgeClass = 'blue';
+                    else if (row.category === 'النقل والوقود') badgeClass = 'purple';
+
+                    tbodyHtml += `
+                        <tr>
+                            <td>
+                                <div style="display: flex; flex-direction: column;">
+                                    <strong style="color: #0f172a; font-size: 0.9rem;">${row.vendor}</strong>
+                                    <span style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">#${row.inv_no || 'بدون'}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="category-badge ${badgeClass}" style="padding: 3px 8px; font-size: 0.75rem;">
+                                    ${row.category}
+                                </span>
+                            </td>
+                            <td><strong style="color: #0f172a;">${row.amount} <span style="font-size: 0.7rem; font-weight: normal; color: #64748b;">ريال</span></strong></td>
+                            <td>
+                                <div style="font-size: 0.8rem; color: #475569;">
+                                    <span>${row.date}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                recentInvoicesBody.innerHTML = tbodyHtml;
+            })
+            .catch(error => {
+                console.error("Error fetching recent invoices:", error);
+                document.getElementById('recentInvoicesBody').innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #ef4444; padding: 30px;">
+                            <i class="fa-solid fa-circle-exclamation"></i> حدث خطأ أثناء تحميل السجلات الأخيرة.
+                        </td>
+                    </tr>
+                `;
+            });
+    });
+</script>
+
+<style>
+    /* تنسيقات إضافية مخصصة لعناصر الداشبورد التفاعلية */
+    .btn-view-all {
+        font-size: 0.8rem;
+        color: #00aaff;
+        text-decoration: none;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: 0.2s;
+    }
+    .btn-view-all:hover {
+        color: #0088cc;
+        transform: translateX(-4px);
+    }
+    .mini-table th {
+        padding: 10px 15px !important;
+        font-size: 0.8rem !important;
+    }
+    .mini-table td {
+        padding: 12px 15px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    @media (max-width: 900px) {
+        .analytics-section {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
 {% endblock %}

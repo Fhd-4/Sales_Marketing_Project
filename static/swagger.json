@@ -1,0 +1,270 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "نظام إدارة المبيعات الذكي API",
+    "description": "توثيق واجهات برمجة التطبيقات (APIs) الخاصة بنظام إدارة المبيعات والتسويق واستخراج بيانات الفواتير.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "خادم التطوير المحلي"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "تسجيل حساب جديد",
+        "description": "إنشاء حساب مستخدم جديد بصلاحيات محددة (مدير أو مدخل بيانات).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "fahad123" },
+                  "password": { "type": "string", "example": "securepass" },
+                  "role": { "type": "string", "enum": ["admin", "entry"], "example": "entry" }
+                },
+                "required": ["username", "password", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم تسجيل الحساب بنجاح",
+            "content": {
+              "application/json": {
+                "example": { "success": true, "message": "تم إنشاء الحساب بنجاح!" }
+              }
+            }
+          },
+          "400": {
+            "description": "خطأ في المدخلات أو اسم المستخدم مسجل مسبقاً",
+            "content": {
+              "application/json": {
+                "example": { "success": false, "message": "اسم المستخدم مسجل بالفعل!" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "تسجيل الدخول",
+        "description": "التحقق من بيانات المستخدم وإصدار جلسة أو رمز الدخول.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "admin" },
+                  "password": { "type": "string", "example": "1234" }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "تم تسجيل الدخول بنجاح!",
+                  "role": "admin",
+                  "username": "admin"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "بيانات الدخول غير صحيحة",
+            "content": {
+              "application/json": {
+                "example": { "success": false, "message": "اسم المستخدم أو كلمة المرور غير صحيحة" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "summary": "مؤشرات الأداء للمدراء",
+        "description": "استرجاع إجمالي الإيرادات، ومتوسط الفواتير، والمورد الأكثر تعاملاً، والفئة الأكثر صرفاً.",
+        "responses": {
+          "200": {
+            "description": "تم جلب البيانات بنجاح",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "total": 12550.75,
+                  "aov": 1394.52,
+                  "count": 9,
+                  "top_vendor": "مكتبة جرير",
+                  "top_category": "التسوق العام"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "غير مصرح (للمدراء فقط)"
+          }
+        }
+      }
+    },
+    "/api/logs": {
+      "get": {
+        "summary": "سجل الفواتير والعمليات",
+        "description": "استرجاع قائمة الفواتير مع خيارات البحث والفلترة.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "البحث باسم المورد أو فئة المصروف",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "نوع الفلترة (all أو today)",
+            "required": false,
+            "schema": { "type": "string", "default": "all" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب السجل بنجاح",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "id": 1,
+                    "vendor": "محطة وقود الدريس",
+                    "inv_no": "REF-1234",
+                    "amount": "150.00",
+                    "category": "النقل والوقود",
+                    "date": "2026-07-18",
+                    "time": "11:30"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scan": {
+      "post": {
+        "summary": "مسح الفاتورة واستخراج البيانات (OCR)",
+        "description": "رفع صورة فاتورة ليقوم النظام باستخراج المورد، والمبلغ، والتاريخ تلقائياً باستخدام OpenCV و Tesseract.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "صورة الفاتورة المرفوعة"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم استخراج البيانات بنجاح",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "vendor": "أسواق العثيم",
+                  "inv_no": "REF-5544",
+                  "amount": "340.50",
+                  "category": "التسوق العام",
+                  "date": "2026-07-18",
+                  "time": "11:40",
+                  "filename": "bill_123.jpg"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/save": {
+      "post": {
+        "summary": "حفظ واعتماد السجل",
+        "description": "حفظ بيانات الفاتورة المراجعة نهائياً في قاعدة البيانات.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vendor": { "type": "string", "example": "شركة الاتصالات السعودية" },
+                  "inv_no": { "type": "string", "example": "INV-STC-990" },
+                  "amount": { "type": "string", "example": "230.00" },
+                  "category": { "type": "string", "example": "الخدمات والكهرباء" },
+                  "date": { "type": "string", "example": "2026-07-18" },
+                  "time": { "type": "string", "example": "11:45" }
+                },
+                "required": ["vendor", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الحفظ بنجاح",
+            "content": {
+              "application/json": {
+                "example": { "success": true, "message": "تم حفظ الفاتورة بنجاح!" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/delete/{id}": {
+      "delete": {
+        "summary": "حذف فاتورة",
+        "description": "حذف سجل فاتورة محددة من قاعدة البيانات باستخدام المعرّف (ID).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "معرف الفاتورة في قاعدة البيانات",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف بنجاح",
+            "content": {
+              "application/json": {
+                "example": { "success": true, "message": "تم حذف السجل بنجاح!" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

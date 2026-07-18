@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - نظام المبيعات الذكي</title>
+    <title>إنشاء حساب - نظام المبيعات الذكي</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* ستايل مخصص لصفحة تسجيل الدخول والخلفية الفخمة */
         body {
             display: flex;
             justify-content: center;
@@ -20,7 +19,7 @@
             font-family: 'Cairo', sans-serif;
         }
 
-        .login-container {
+        .register-container {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -33,18 +32,18 @@
             transition: all 0.4s ease;
         }
 
-        .login-container:hover {
+        .register-container:hover {
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
             transform: translateY(-5px);
         }
 
-        .login-header h2 {
+        .register-header h2 {
             color: #ffffff;
             margin-bottom: 8px;
             font-weight: 700;
         }
 
-        .login-header p {
+        .register-header p {
             color: #94a3b8;
             font-size: 0.9rem;
             margin-bottom: 30px;
@@ -65,7 +64,7 @@
             transition: 0.3s;
         }
 
-        .input-group input {
+        .input-group input, .input-group select {
             width: 100%;
             padding: 14px 45px 14px 15px;
             background: rgba(15, 23, 42, 0.6);
@@ -76,16 +75,36 @@
             box-sizing: border-box;
             outline: none;
             transition: all 0.3s ease;
+            appearance: none; /* إخفاء سهم السيلكت الافتراضي لتخصيصه */
         }
 
-        .input-group input:focus {
+        /* سهم السيلكت المخصص */
+        .select-group::after {
+            content: "\f0d7";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .input-group input:focus, .input-group select:focus {
             border-color: #00aaff;
             box-shadow: 0 0 10px rgba(0, 170, 255, 0.25);
             background: rgba(15, 23, 42, 0.8);
         }
 
-        .input-group input:focus + i {
+        .input-group input:focus + i, .input-group select:focus + i {
             color: #00aaff;
+        }
+
+        /* خيارات القائمة المنسدلة باللون الداكن */
+        .input-group select option {
+            background-color: #1e293b;
+            color: white;
         }
 
         .btn-submit {
@@ -112,10 +131,6 @@
             filter: brightness(1.1);
         }
 
-        .btn-submit:active {
-            transform: translateY(0);
-        }
-
         .alert-error {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -130,24 +145,37 @@
             gap: 8px;
         }
 
-        .register-link {
+        .alert-success {
+            background: rgba(39, 174, 96, 0.15);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+            color: #2ecc71;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            display: none;
+            text-align: right;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .login-link {
             margin-top: 25px;
             font-size: 0.9rem;
             color: #94a3b8;
         }
 
-        .register-link a {
+        .login-link a {
             color: #00aaff;
             text-decoration: none;
             font-weight: 600;
             transition: 0.2s;
         }
 
-        .register-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
 
-        /* لودر التحميل أثناء الاتصال بالـ API */
         .spinner {
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
@@ -165,10 +193,10 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-header">
-            <h2>تسجيل الدخول</h2>
-            <p>مرحباً بك في نظام إدارة المبيعات الذكي</p>
+    <div class="register-container">
+        <div class="register-header">
+            <h2>إنشاء حساب جديد</h2>
+            <p>سجل حسابك للوصول لنظام المبيعات</p>
         </div>
 
         <!-- صندوق التنبيه بالأخطاء -->
@@ -177,77 +205,95 @@
             <span id="errorMessage"></span>
         </div>
 
-        <!-- نموذج تسجيل الدخول مرتبط بالـ API مباشرة عبر Fetch -->
-        <form id="loginForm">
+        <!-- صندوق التنبيه بالنجاح -->
+        <div id="successAlert" class="alert-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="successMessage"></span>
+        </div>
+
+        <form id="registerForm">
             <div class="input-group">
-                <input type="text" id="username" placeholder="اسم المستخدم" required>
+                <input type="text" id="username" placeholder="اسم المستخدم الجديد" required>
                 <i class="fa-solid fa-user"></i>
             </div>
+            
             <div class="input-group">
                 <input type="password" id="password" placeholder="كلمة المرور" required>
                 <i class="fa-solid fa-lock"></i>
             </div>
+            
+            <div class="input-group select-group">
+                <select id="role" required>
+                    <option value="entry">مدخل بيانات (إضافة فواتير فقط)</option>
+                    <option value="admin">مدير النظام (صلاحيات كاملة)</option>
+                </select>
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+
             <button type="submit" class="btn-submit" id="submitBtn">
                 <span class="spinner" id="btnSpinner"></span>
-                <span id="btnText">دخول</span>
+                <span id="btnText">تسجيل حساب جديد</span>
             </button>
         </form>
 
-        <div class="register-link">
-            ليس لديك حساب؟ <a href="{{ url_for('register_page') }}">إنشاء حساب جديد</a>
+        <div class="login-link">
+            لديك حساب بالفعل؟ <a href="{{ url_for('login_page') }}">تسجيل الدخول</a>
         </div>
     </div>
 
     <script>
-        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
         const errorAlert = document.getElementById('errorAlert');
         const errorMessage = document.getElementById('errorMessage');
+        const successAlert = document.getElementById('successAlert');
+        const successMessage = document.getElementById('successMessage');
         const submitBtn = document.getElementById('submitBtn');
         const btnSpinner = document.getElementById('btnSpinner');
         const btnText = document.getElementById('btnText');
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // منع الإرسال الافتراضي للفورم
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // إخفاء الأخطاء وتفعيل لودر الانتظار
             errorAlert.style.display = 'none';
+            successAlert.style.display = 'none';
             btnSpinner.style.display = 'inline-block';
-            btnText.innerText = 'جاري التحقق...';
+            btnText.innerText = 'جاري التسجيل...';
             submitBtn.disabled = true;
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
 
             try {
-                // الاتصال بـ API تسجيل الدخول (API Swagger)
-                const response = await fetch('/api/auth/login', {
+                // الاتصال بـ API تسجيل الحسابات (API Swagger)
+                const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, role })
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // إذا نجح تسجيل الدخول، يتم التوجيه بناءً على الدور المرسل من الـ API
-                    if (data.role === 'admin') {
-                        window.location.href = '/dashboard';
-                    } else {
-                        window.location.href = '/add';
-                    }
+                    successMessage.innerText = data.message || 'تم تسجيل الحساب بنجاح!';
+                    successAlert.style.display = 'flex';
+                    registerForm.reset();
+                    
+                    // توجيه لصفحة تسجيل الدخول بعد 2 ثانية
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
                 } else {
-                    // إظهار رسالة الخطأ الواردة من الـ API
-                    showError(data.message || 'بيانات الدخول غير صحيحة');
+                    showError(data.message || 'فشل التسجيل. يرجى التحقق من البيانات.');
                 }
             } catch (err) {
                 showError('حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.');
                 console.error(err);
             } finally {
-                // إعادة الزر لوضعه الطبيعي
                 btnSpinner.style.display = 'none';
-                btnText.innerText = 'دخول';
+                btnText.innerText = 'تسجيل حساب جديد';
                 submitBtn.disabled = false;
             }
         });
